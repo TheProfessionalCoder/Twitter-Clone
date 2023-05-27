@@ -1,0 +1,97 @@
+from flask import Flask, render_template, request, redirect, session
+
+app = Flask(__name__)
+app.secret_key = 'your_secret_key'  # Set a secret key for session management
+
+# Sample database (replace with actual database integration)
+users = {
+    'user1': {
+        'username': 'user1',
+        'password': 'password123',
+        'tweets': []
+    },
+    'user2': {
+        'username': 'user2',
+        'password': 'password456',
+        'tweets': []
+    }
+}
+
+tweets = []
+
+
+@app.route('/')
+def home():
+    if 'username' in session:
+        username = session['username']
+        user_tweets = [tweet for tweet in tweets if tweet['username'] == username]
+        return render_template('home.html', username=username, tweets=user_tweets)
+    else:
+        return redirect('/login')
+
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+
+        if username and password:
+            if username in users:
+                return render_template('register.html', error='Username already exists')
+
+            users[username] = {
+                'username': username,
+                'password': password,
+                'tweets': []
+            }
+            return redirect('/login')
+        else:
+            return render_template('register.html', error='Please provide username and password')
+
+    return render_template('register.html', error='')
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+
+        if username and password:
+            if username in users and users[username]['password'] == password:
+                session['username'] = username
+                return redirect('/')
+            else:
+                return render_template('login.html', error='Invalid username or password')
+
+        return render_template('login.html', error='Please provide username and password')
+
+    return render_template('login.html', error='')
+
+
+@app.route('/logout')
+def logout():
+    session.pop('username', None)
+    return redirect('/login')
+
+
+@app.route('/tweet', methods=['POST'])
+def tweet():
+    if 'username' in session:
+        username = session['username']
+        content = request.form['content']
+
+        if content:
+            tweet = {
+                'username': username,
+                'content': content
+            }
+            tweets.append(tweet)
+            users[username]['tweets'].append(tweet)
+
+    return redirect('/')
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
